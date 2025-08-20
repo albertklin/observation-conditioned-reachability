@@ -96,3 +96,5 @@ These correspond to what is described in the paper as "hard" environments, where
 `python scripts/run_sims.py`
 
 Analyze the results with `python scripts/analyze_sims.py`
+
+These steps should reproduce the results in Table III of the paper (specifically, PS + WTW OCR). Other results should be reproducible by setting the parameters as specified in the paper.
