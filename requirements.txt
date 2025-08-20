@@ -1,3 +1,5 @@
 tqdm
 matplotlib
 wandb
+cvxpy
+huggingface_hub
