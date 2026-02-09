@@ -1,0 +1,10 @@
+// MPS planner trajectory output
+// Used for visualization of planned path
+
+struct mps_trajectory {
+    int64_t timestamp;      // Microseconds since epoch
+    int32_t num_points;     // Number of trajectory points
+    double xs[100];         // X positions (max 100 points)
+    double ys[100];         // Y positions
+    double ths[100];        // Heading angles
+}

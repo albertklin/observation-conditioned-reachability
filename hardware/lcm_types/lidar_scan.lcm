@@ -1,0 +1,11 @@
+package ocr_lcm;
+
+// Raw LiDAR scan data from sensor
+struct lidar_scan
+{
+    int64_t  timestamp;      // Timestamp in microseconds
+    int32_t  count;          // Number of valid points in this scan
+    double   angle[1400];    // Angles in radians (ego-frame)
+    double   range[1400];    // Ranges in meters
+    int8_t   quality[1400];  // Quality/intensity values (sensor-specific)
+}

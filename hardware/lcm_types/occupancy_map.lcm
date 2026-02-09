@@ -1,0 +1,12 @@
+// Occupancy map from SLAM
+// Used by the MPS planner for path planning
+
+struct occupancy_map {
+    int64_t timestamp;      // Microseconds since epoch
+    int32_t width;          // Grid width
+    int32_t height;         // Grid height
+    float resolution;       // Meters per cell
+    float origin_x;         // Origin X in meters
+    float origin_y;         // Origin Y in meters
+    boolean map[40000];     // Occupancy grid (200x200 max)
+}

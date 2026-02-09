@@ -9,7 +9,6 @@ import isaacgym
 import torch
 assert isaacgym
 import numpy as np
-import cvxpy as cp
 import matplotlib.pyplot as plt
 
 from tqdm import tqdm
@@ -27,6 +26,7 @@ from utils.predictive_sampler import PredictiveSampler
 from utils.disturbance_estimator import DisturbanceEstimator
 from utils.value_network.models import LiDARValueNN
 from utils.online_environment import OnlineEnvironment
+from utils.safety_filter import SafetyFilter
 
 os.environ['VK_ICD_FILENAMES'] = '/usr/share/vulkan/icd.d/nvidia_icd.json'
 
@@ -181,8 +181,19 @@ for env_id in tqdm(os.listdir(ENV_DIR)):
 
     # filter parameters
     filter_threshold = 0.35
-    calibration_value_adjustment = -0.5
+    calibration_value_adjustment = -0.5  # from calibrate_value_network.py
     slack_coeff = 1e3
+
+    # safety filter
+    safety_filter = SafetyFilter(
+        model=model,
+        dynamics=dynamics,
+        control_min=qp_control_min,
+        control_max=qp_control_max,
+        filter_threshold=filter_threshold,
+        calibration_value_adjustment=calibration_value_adjustment,
+        slack_coeff=slack_coeff,
+    )
 
     # disturbance estimation parameters
     prediction_horizon = 2
@@ -254,59 +265,6 @@ for env_id in tqdm(os.listdir(ENV_DIR)):
         'calibration_value_adjustment': calibration_value_adjustment,
         'env_path': os.path.join(os.path.basename(ENV_DIR), env_id),
     }
-
-    # helper function for computing control via smooth least-restrictive filtering
-    def smooth_lr_control(val, th, dvdx, dvdy, dvdth, nom_v_x, nom_v_yaw, dst, state=None):
-        if val > filter_threshold:
-            return nom_v_x, nom_v_yaw
-        else:
-            sth, cth = np.sin(th), np.cos(th)
-            try:
-                ctrl = cp.Variable(2)
-                slack = cp.Variable(1)
-                prob = cp.Problem(
-                    cp.Minimize(cp.sum_squares(ctrl-np.array([nom_v_x, nom_v_yaw])) + slack_coeff*cp.square(slack)),
-                    [
-                        cp.sum(cp.multiply(ctrl, np.array([dvdx*cth + dvdy*sth, dvdth]))) >= -slack + dst[0]*np.linalg.norm([dvdx, dvdy]) + dst[1]*np.abs(dvdth),
-                        ctrl >= qp_control_min,
-                        ctrl <= qp_control_max,
-                        slack >= 0,
-                    ],
-                )
-                prob.solve()
-                if prob.status != 'optimal':
-                    raise Exception(f'prob.status: {prob.status}')
-                return ctrl.value
-            except Exception as e:
-                # QP failed
-                print(str(e))
-                return qp_control_min[0] if (dvdx*cth + dvdy*sth) < 0 else qp_control_max[0], qp_control_min[1] if dvdth < 0 else qp_control_max[1]
-
-    # helper function for querying pred value and control
-    def pred_value_and_control(dst, state, inp_lidar, nom_v_x, nom_v_yaw): # dst is the disturbance_bound [dst_dxdy_max, dst_dth_max]
-        # create input to model
-        # compute relative state and grad in ego frame
-        cth, sth = np.cos(state[2]), np.sin(state[2])
-        rot = np.array([
-            [cth, sth],
-            [-sth, cth],
-        ])
-        rel_state = state.copy()
-        rel_state[:2] = np.matmul(rot, (rel_state[:2]-state[:2])[:, np.newaxis]).squeeze(axis=-1)
-        rel_state[2] = rel_state[2] - state[2]
-        rel_state = dynamics.wrap_states(rel_state[np.newaxis])[0]
-        inputs = torch.as_tensor(np.concatenate((rel_state, dst, inp_lidar), axis=-1)[np.newaxis], dtype=torch.float32).cuda()
-        # create states leaf tensor to allow grad computation
-        states = inputs[:, :3].detach().clone().requires_grad_(True)
-        inputs[:, :3] = states
-        # forward pass
-        pred_values = model.forward(inputs) + calibration_value_adjustment
-        pred_grad = torch.autograd.grad(pred_values.unsqueeze(-1), states, torch.ones_like(pred_values.unsqueeze(-1)), create_graph=False)[0][0].detach().cpu()
-        # rotate grad to the world frame
-        pred_grad[:2] = torch.matmul(torch.as_tensor(rot.T, dtype=torch.float32), pred_grad[:2, None]).squeeze(-1)
-        # return predicted value and control
-        pred_value = pred_values.item()
-        return pred_value, smooth_lr_control(pred_value, state[2], *pred_grad, nom_v_x, nom_v_yaw, dst, state)
 
     # run control loop
     intervention_time = 0
@@ -385,7 +343,7 @@ for env_id in tqdm(os.listdir(ENV_DIR)):
 
         # query network
         if dst is not None:
-            pred_value, pred_control = pred_value_and_control(dst, state, inp_lidar, nom_v_x, nom_v_yaw)
+            pred_value, pred_control = safety_filter.filter(state, inp_lidar, dst, nom_v_x, nom_v_yaw)
         else:
             pred_value, pred_control = None, None
 

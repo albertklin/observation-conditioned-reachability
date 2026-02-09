@@ -1,0 +1,73 @@
+# OCR Safety Filter Configuration - Hardware Mode
+# Uses real RPLidar and BreezySLAM
+
+# Node implementations
+nodes:
+  lidar: rplidar
+  state_estimator: slam
+  planner: mps
+  robot: null  # Real robot (not simulated)
+
+# Hardware settings
+hardware:
+  # LiDAR port (auto-detected if not specified)
+  lidar_port: null
+  lidar_baudrate: 256000
+
+# Model paths
+model:
+  checkpoint: "results/training/checkpoints/epoch_05000.pth"
+  options: "results/training/options.pickle"
+
+# Safety filter parameters
+filter:
+  threshold: 0.35
+  calibration_adjustment: -0.5
+  slack_coeff: 1000.0
+
+# Control bounds
+control:
+  v_x_min: 0.0
+  v_x_max: 2.0
+  v_yaw_min: -2.0
+  v_yaw_max: 2.0
+
+# LiDAR parameters
+lidar:
+  min_range: 0.2
+  max_range: 10.0
+  rel_position: [0.2, 0.0]
+  quality_threshold: 40
+  focus_radius: 2.0
+  focus_fov: .inf
+
+# Disturbance estimation
+disturbance:
+  prediction_horizon: 2.0
+  window_horizon: 10.0
+  coverage: 0.8
+  std_width: 2.0
+  max_dxdy: 1.0
+  max_dth: 2.0
+
+# Model Predictive Sampling (planner)
+planner:
+  horizon: 4.0
+  dt: 0.2
+  num_samples: 1000
+  noise_scale_factor: 0.25
+
+# Robot parameters
+robot:
+  radius: 0.35
+  dt: 0.05
+
+# SLAM parameters
+slam:
+  map_size_pixels: 2000
+  map_size_meters: 20.0
+  reduced_map_size: 200
+  occupancy_threshold: 0.85
+  empty_threshold: 0.01
+  interp_radius: 0.1
+  map_publish_period: 1.0

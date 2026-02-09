@@ -1,0 +1,10 @@
+package ocr_lcm;
+
+// Robot state estimate from SLAM or other state estimator
+struct robot_state
+{
+    int64_t  timestamp;  // Timestamp in microseconds
+    double   x;          // X position in meters (world frame)
+    double   y;          // Y position in meters (world frame)
+    double   theta;      // Heading in radians [-pi, pi]
+}

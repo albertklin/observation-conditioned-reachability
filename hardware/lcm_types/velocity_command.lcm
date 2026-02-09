@@ -1,0 +1,10 @@
+package ocr_lcm;
+
+// Velocity command to robot
+struct velocity_command
+{
+    int64_t  timestamp;  // Timestamp in microseconds
+    double   v_x;        // Forward velocity in m/s
+    double   v_yaw;      // Yaw rate in rad/s
+    boolean  is_safe;    // True if command passed safety filter
+}

@@ -3,3 +3,10 @@ matplotlib
 wandb
 cvxpy
 huggingface_hub
+pyyaml
+scipy
+scikit-image
+pynput
+lcm
+pyqt5
+pyqtgraph

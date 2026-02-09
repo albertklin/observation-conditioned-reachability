@@ -1,0 +1,30 @@
+package ocr_lcm;
+
+// Safety filter status for monitoring and logging
+struct safety_status
+{
+    int64_t  timestamp;       // Timestamp in microseconds
+
+    // Commands
+    double   nom_v_x;         // Nominal (input) forward velocity
+    double   nom_v_yaw;       // Nominal (input) yaw rate
+    double   safe_v_x;        // Filtered (output) forward velocity
+    double   safe_v_yaw;      // Filtered (output) yaw rate
+
+    // State
+    double   state[3];        // Robot state [x, y, theta]
+    double   lidar_state[3];  // State when LiDAR was captured
+
+    // Safety metrics
+    double   value;           // Predicted value function
+    double   threshold;       // Safety threshold
+    boolean  is_intervening;  // True if filter is modifying command
+
+    // Disturbance estimate
+    double   dst_dxdy;        // Estimated disturbance bound in xy
+    double   dst_dth;         // Estimated disturbance bound in theta
+
+    // Preprocessed LiDAR for network (num_rays elements)
+    int32_t  num_rays;
+    double   inp_lidar[100];
+}

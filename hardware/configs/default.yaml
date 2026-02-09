@@ -1,0 +1,73 @@
+# OCR Safety Filter Configuration
+# Base configuration with common parameters.
+#
+# For deployment, refer to the examples:
+#   - simulation.yaml: Simulated robot with LCM
+#   - hardware.yaml: Real hardware with RPLidar + BreezySLAM
+#
+# Or create your own config that specifies the 'nodes' section.
+
+# Node implementations (see simulation.yaml or hardware.yaml for examples)
+# nodes:
+#   lidar: rplidar | null
+#   state_estimator: slam | null
+#   planner: mps
+#   robot: simulated | null
+
+# Model paths
+model:
+  checkpoint: "results/training/checkpoints/epoch_05000.pth"
+  options: "results/training/options.pickle"
+
+# Safety filter parameters
+filter:
+  threshold: 0.35  # Value above which no filtering is applied
+  calibration_adjustment: -0.5  # Negated output from calibrate_value_network.py
+  slack_coeff: 1000.0  # Weight on slack variable in QP
+
+# Control bounds
+control:
+  v_x_min: 0.0  # m/s
+  v_x_max: 2.0  # m/s
+  v_yaw_min: -2.0  # rad/s
+  v_yaw_max: 2.0  # rad/s
+
+# LiDAR parameters
+lidar:
+  min_range: 0.2  # m
+  max_range: 10.0  # m
+  rel_position: [0.2, 0.0]  # [x, y] offset from robot center (matches training)
+  quality_threshold: 40
+  focus_radius: 2.0  # m, for input preprocessing
+  focus_fov: .inf  # rad, for input preprocessing (inf = no limit)
+
+# Disturbance estimation
+disturbance:
+  prediction_horizon: 2.0  # seconds
+  window_horizon: 10.0  # seconds
+  coverage: 0.8  # proportion of samples to use
+  std_width: 2.0  # standard deviations
+  max_dxdy: 1.0  # m/s, max xy disturbance bound
+  max_dth: 2.0  # rad/s, max theta disturbance bound
+
+# Model Predictive Sampling (planner)
+planner:
+  horizon: 4.0  # seconds
+  dt: 0.2  # s, planner timestep
+  num_samples: 1000
+  noise_scale_factor: 0.25  # fraction of control range
+
+# Robot parameters
+robot:
+  radius: 0.35  # m
+  dt: 0.05  # s, expected control loop period (for disturbance estimator)
+
+# SLAM parameters (for SimStateEstimator)
+slam:
+  map_size_pixels: 2000
+  map_size_meters: 20.0
+  reduced_map_size: 200
+  occupancy_threshold: 0.85
+  empty_threshold: 0.01
+  interp_radius: 0.1  # rad, max angle distance for valid interpolation
+  map_publish_period: 1.0  # seconds, how often to publish occupancy map
